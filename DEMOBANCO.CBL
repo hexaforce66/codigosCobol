@@ -12,7 +12,7 @@
 
        PROCEDURE DIVISION.
        INICIO.
-           DISPLAY "Introduce el número de tarjeta:"
+           DISPLAY "Introduce el número de tarjeta::"
            ACCEPT NUMERO-TARJETA
            DISPLAY "Introduce la cuenta bancaria:"
            ACCEPT CUENTA-BANCARIA
