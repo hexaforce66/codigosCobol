@@ -27,7 +27,7 @@ MAIN-PROCEDURE.
               READ TRANS-FILE AT END EXIT PERFORM END-READ
               MOVE TR-ID TO ID-BUSCAR
                
-               * Consulta saldo actual
+               * Consulta saldo actuall
                EXEC SQL SELECT SALDO INTO :DB-SALDO 
                         FROM CUENTAS WHERE ID = :ID-BUSCAR END-EXEC
                
