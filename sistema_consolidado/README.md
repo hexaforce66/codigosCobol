@@ -1,24 +1,24 @@
 # 🚀 Reporte: SISTEMA CONSOLIDADO
 
-**OBJETIVO PRINCIPAL**: El objetivo principal de este programa COBOL es procesar transacciones bancarias, actualizando los saldos de las cuentas en una base de datos según las transacciones registradas en un archivo de texto.
+**OBJETIVO PRINCIPAL**: El objetivo principal de este programa COBOL es procesar transacciones bancarias, actualizando los saldos de las cuentas en una base de datos según los montos de las transacciones.
 
 **FLUJO FUNCIONAL**: El proceso se divide en tres pasos clave:
 
-1. **Iniciar el procesamiento**: El programa inicia la conexión con la base de datos, abre el archivo de transacciones y comienza a leer las transacciones registradas.
-2. **Procesar transacciones**: Para cada transacción, el programa consulta el saldo actual de la cuenta, actualiza el saldo según la transacción y registra el resultado en la base de datos.
-3. **Finalizar el procesamiento**: El programa cierra el archivo de transacciones, muestra un resumen del procesamiento y finaliza la ejecución.
+1. **Lectura de transacciones**: El programa lee un archivo de transacciones (`transacciones.txt`) y procesa cada registro.
+2. **Validación y actualización**: Para cada transacción, el programa verifica si el monto es positivo y si la cuenta existe en la base de datos. Si todo es correcto, actualiza el saldo de la cuenta.
+3. **Resumen y finalización**: Al final del proceso, el programa muestra un resumen de las transacciones procesadas, incluyendo el total de transacciones leídas, procesadas con éxito y con errores.
 
-**SISTEMAS RELACIONADOS**: El programa utiliza dos archivos COBOL:
+**SISTEMAS RELACIONADOS**: El programa utiliza dos archivos:
 
 | Archivo | Detalle | Link |
 | --- | --- | --- |
 | BANCO.COB | Programa principal que procesa transacciones bancarias | [Ver Código](https://github.com/hexaforce66/codigosCobol/blob/main/BANCO.COB) |
 | VAL-MOTOR.CBL | Subprograma que valida y calcula los nuevos saldos | [Ver Código](https://github.com/hexaforce66/codigosCobol/blob/main/VAL-MOTOR.CBL) |
 
-**VALOR DE NEGOCIO**: El programa ayuda a reducir el riesgo operativo al procesar transacciones de manera automática y precisa, minimizando errores humanos. Además, proporciona un registro detallado de las transacciones, lo que facilita la auditoría y el control de los movimientos bancarios. El impacto en el negocio es significativo, ya que permite una gestión más eficiente de las cuentas y transacciones, lo que a su vez puede mejorar la satisfacción del cliente y reducir costos operativos.
+**VALOR DE NEGOCIO**: El programa ayuda a reducir el riesgo operativo al validar y procesar transacciones de manera automática, minimizando errores humanos y garantizando la integridad de los datos. Además, proporciona un resumen detallado de las transacciones procesadas, lo que facilita la auditoría y el análisis de los datos. Sin embargo, si el programa no se ejecuta correctamente, puede generar errores en la base de datos, lo que podría tener un impacto significativo en la operación del banco. Por lo tanto, es fundamental asegurarse de que el programa se pruebe exhaustivamente antes de su implementación en producción.
 
 ## 📖 1. Glosario
-Diccionario de Datos Bancarios
+Diccionario de Datos Bancarios:
 
 | Variable | Concepto | Formato | Definición |
 | --- | --- | --- | --- |
@@ -27,7 +27,7 @@ Diccionario de Datos Bancarios
 | DB-SALDO | Saldo actual de la cuenta | PIC 9(10)V99 | Saldo actual de la cuenta con dos decimales |
 | ID-BUSCAR | Identificador de cuenta a buscar | PIC 9(05) | Número de cuenta a buscar |
 | SQLCODE | Código de error de SQL | PIC S9(09) COMP | Código de error de SQL |
-| FS-STATUS | Estado del archivo | PIC X(02) | Estado del archivo (00: ok, otros: error) |
+| FS-STATUS | Estado del archivo | PIC X(02) | Estado del archivo (00: éxito, otros: error) |
 | WS-EOF | Indicador de fin de archivo | PIC X(01) | Indicador de fin de archivo (Y/N) |
 | WS-SALDO-ACTUAL | Saldo actual de la cuenta | PIC 9(10)V99 | Saldo actual de la cuenta con dos decimales |
 | WS-MONTO-TRANS | Monto de la transacción | PIC 9(08)V99 | Monto de la transacción con dos decimales |
@@ -38,7 +38,7 @@ Diccionario de Datos Bancarios
 | WS-TOTAL-ERROR | Total de transacciones con error | PIC 9(05) | Total de transacciones con error |
 | WS-SUMA-MONTOS | Suma total de montos | PIC 9(12)V99 | Suma total de montos con dos decimales |
 
-Nota: Los formatos PIC (Picture) son utilizados en COBOL para definir el formato de los datos. Los formatos PIC 9(n) indican un campo numérico de n dígitos, mientras que los formatos PIC X(n) indican un campo alfanumérico de n caracteres. El formato PIC S9(n) COMP indica un campo numérico de n dígitos con signo. El formato PIC 9(n)V99 indica un campo numérico de n dígitos con dos decimales.
+Nota: Los formatos de los campos están definidos según la notación COBOL. Los campos numéricos se representan con "PIC 9" seguido del número de dígitos, y los campos numéricos con decimales se representan con "PIC 9" seguido del número de dígitos y "V" seguido del número de decimales. Los campos alfanuméricos se representan con "PIC X" seguido del número de caracteres.
 
 ## 📋 2. Lógica
 **Reglas de Negocio**
@@ -63,30 +63,33 @@ Nota: Los formatos PIC (Picture) son utilizados en COBOL para definir el formato
 *   **2300-MANEJAR-ERROR-SQL**: Maneja errores de SQL.
 *   **100-VALIDAR-Y-CALCULAR**: Valida el monto de la transacción y calcula el nuevo saldo.
 
+**Lógica de Negocio**
+
+1.  Lee un registro de transacción del archivo.
+2.  Valida el monto de la transacción (debe ser positivo).
+3.  Si el monto es válido, actualiza el saldo en la base de datos.
+4.  Si el saldo actual más el monto de la transacción es mayor o igual a cero, actualiza el saldo.
+5.  Si el saldo actual más el monto de la transacción es menor a cero, rechaza la transacción.
+6.  Maneja errores de SQL.
+
 ## 🔄 3. BPMN
 ```mermaid
 graph TD
-A[PROCESO-BANCO] --> B[TRANS-FILE]
-    A --> C[BANCO_DB]
-    A --> D[2100-PROCESAR-REGISTRO]
-    D --> E[CUENTAS]
-    D --> F[VAL-MOTOR]
-    F --> G[100-VALIDAR-Y-CALCULAR]
-    G --> H[CUENTAS]
-    H --> I[3000-FINALIZAR]
-    I --> J[TRANS-FILE]
-    J --> K[FIN]
+A[PROCESO-BANCO] --> B[1000-INICIO]
+    B --> C[2000-PROCESAR-CICLO]
+    C --> D[2100-PROCESAR-REGISTRO]
+    D --> E[2200-GESTIONAR-MOTOR]
+    E --> F[VAL-MOTOR]
+    F --> E
+    E --> G[2210-UPDATE-DB]
+    G --> H[3000-FINALIZAR]
+    H --> I[FIN]
 ```
 
 ## 📊 4. Calidad
 | Funcionalidad | Fiabilidad (%) | Cobertura (%) | Calidad (%) | Notas Justificativas |
 | --- | --- | --- | --- | --- |
-| Procesamiento de transacciones | 90 | 80 | 85 | La implementación es robusta y puede manejar grandes cantidades de transacciones, pero puede requerir ajustes para manejar casos de borde. |
-| Lectura de archivo de transacciones | 95 | 90 | 92 | La implementación es eficiente y puede leer archivos de gran tamaño, pero puede requerir ajustes para manejar formatos de archivo diferentes. |
-| Procesamiento de transacciones en paralelo | 80 | 70 | 75 | La implementación puede procesar transacciones en paralelo, pero puede requerir ajustes para mejorar la eficiencia y evitar problemas de concurrencia. |
-| Manejo de errores y excepciones | 85 | 80 | 82 | La implementación maneja errores y excepciones de manera adecuada, pero puede requerir ajustes para mejorar la robustez y la capacidad de recuperación. |
-| Documentación y comentarios | 70 | 60 | 65 | La implementación tiene una documentación y comentarios adecuados, pero puede requerir ajustes para mejorar la claridad y la comprensión. |
-| Seguridad y autenticación | 60 | 50 | 55 | La implementación no tiene una seguridad y autenticación robusta, por lo que es necesario agregar medidas de seguridad adicionales. |
-| Escalabilidad y rendimiento | 80 | 70 | 75 | La implementación es escalable y tiene un buen rendimiento, pero puede requerir ajustes para mejorar la eficiencia y el manejo de grandes cantidades de datos. |
-| Integración con otros sistemas | 70 | 60 | 65 | La implementación puede integrarse con otros sistemas, pero puede requerir ajustes para mejorar la compatibilidad y la interoperabilidad. |
-| Pruebas y validación | 80 | 70 | 75 | La implementación tiene pruebas y validación adecuadas, pero puede requerir ajustes para mejorar la cobertura y la robustez. |
+| Procesamiento de transacciones | 90 | 80 | 85 | La implementación es robusta y cubre la mayoría de los casos de uso, pero puede requerir ajustes para manejar errores y excepciones. |
+| Integración con base de datos | 95 | 90 | 92 | La configuración de la base de datos es correcta, pero puede requerir ajustes para mejorar el rendimiento y la seguridad. |
+| Exposición de endpoint | 80 | 70 | 75 | El controlador es funcional, pero puede requerir ajustes para mejorar la seguridad y el manejo de errores. |
+| Calidad del código | 85 | 80 | 82 | El código es legible y mantenible, pero puede requerir ajustes para mejorar la estructura y la documentación. |
