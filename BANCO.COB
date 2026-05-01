@@ -1,9 +1,5 @@
 IDENTIFICATION DIVISION.
        PROGRAM-ID. PROCESO-BANCO.
-       AUTHOR. GEMINI-AI.
-      * ESTE CODIGO MANTIENE COMPATIBILIDAD CON:
-      * 1. transacciones.txt (ID y MONTO)
-      * 2. init_db.sql (Tabla CUENTAS con ID y SALDO)
 
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
@@ -24,44 +20,79 @@ IDENTIFICATION DIVISION.
            05 TR-MONTO       PIC 9(08)V99.
 
        WORKING-STORAGE SECTION.
-      *--- VARIABLES PARA SQL ---
        EXEC SQL BEGIN DECLARE SECTION END-EXEC.
        01 DB-SALDO           PIC 9(10)V99.
        01 ID-BUSCAR          PIC 9(05).
        01 SQLCODE            PIC S9(09) COMP.
        EXEC SQL END DECLARE SECTION END-EXEC.
 
-      *--- VARIABLES DE CONTROL DE ARCHIVOS ---
        01 FS-STATUS          PIC X(02).
        01 WS-EOF             PIC X(01) VALUE 'N'.
           88 FIN-ARCHIVO     VALUE 'Y'.
 
-      *--- VARIABLES DE LOGICA DE NEGOCIO ---
+      *--- ESTRUCTURA DE COMUNICACION (DEPENDENCIA) ---
+       01 WS-AREA-INTERCAMBIO.
+          05 WS-SALDO-ACTUAL PIC 9(10)V99.
+          05 WS-MONTO-TRANS  PIC 9(08)V99.
+          05 WS-NUEVO-SALDO  PIC 9(10)V99.
+          05 WS-RESULT-CODE  PIC X(02).
+
        01 WS-CONTADORES.
           05 WS-TOTAL-TRANS   PIC 9(05) VALUE ZERO.
           05 WS-TOTAL-EXITO   PIC 9(05) VALUE ZERO.
           05 WS-TOTAL-ERROR   PIC 9(05) VALUE ZERO.
           05 WS-SUMA-MONTOS   PIC 9(12)V99 VALUE ZERO.
 
-       01 WS-FORMATOS-SALIDA.
-          05 WS-MONTO-EDIT    PIC ZZZ.ZZZ.ZZ9,99.
-          05 WS-SALDO-EDIT    PIC ZZZ.ZZZ.ZZ9,99.
-
-       01 WS-BANDERAS.
-          05 WS-EXISTE-CUENTA PIC X(01).
-          05 WS-SALDO-OK      PIC X(01).
-
        PROCEDURE DIVISION.
        MAIN-LOGIC.
            PERFORM 1000-INICIO.
-           
            IF FS-STATUS = "00"
                PERFORM 2000-PROCESAR-CICLO UNTIL FIN-ARCHIVO
-           ELSE
-               DISPLAY "ERROR: NO SE PUDO ABRIR EL ARCHIVO STATUS: " 
-                       FS-STATUS
            END-IF.
+           PERFORM 3000-FINALIZAR.
+           STOP RUN.
+
+       2100-PROCESAR-REGISTRO.
+           ADD 1 TO WS-TOTAL-TRANS.
+           MOVE TR-ID TO ID-BUSCAR.
            
+           EXEC SQL 
+               SELECT SALDO INTO :DB-SALDO 
+               FROM CUENTAS 
+               WHERE ID = :ID-BUSCAR 
+           END-EXEC.
+
+           IF SQLCODE = 0
+               PERFORM 2200-GESTIONAR-MOTOR
+           ELSE
+               PERFORM 2300-MANEJAR-ERROR-SQL
+           END-IF.
+
+       2200-GESTIONAR-MOTOR.
+      * PREPARAR DATOS PARA EL SUBPROGRAMA
+           MOVE DB-SALDO TO WS-SALDO-ACTUAL
+           MOVE TR-MONTO TO WS-MONTO-TRANS
+           
+      * LLAMADA AL SUBPROGRAMA (DEPENDENCIA)
+           CALL 'VAL-MOTOR' USING WS-AREA-INTERCAMBIO
+           
+           IF WS-RESULT-CODE = 'OK'
+               MOVE WS-NUEVO-SALDO TO DB-SALDO
+               PERFORM 2210-UPDATE-DB
+           ELSE
+               DISPLAY "  AVISO: MOTOR RECHAZO ID " TR-ID
+               ADD 1 TO WS-TOTAL-ERROR
+           END-IF.
+
+       2210-UPDATE-DB.
+           EXEC SQL 
+               UPDATE CUENTAS SET SALDO = :DB-SALDO WHERE ID = :ID-BUSCAR 
+           END-EXEC.
+           IF SQLCODE = 0
+               ADD 1 TO WS-TOTAL-EXITO
+               ADD TR-MONTO TO WS-SUMA-MONTOS
+               EXEC SQL COMMIT END-EXEC
+           END-IF.           
            PERFORM 3000-FINALIZAR.
            STOP RUN.
 
