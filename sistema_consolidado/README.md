@@ -4,41 +4,39 @@
 
 **FLUJO FUNCIONAL**: El proceso se divide en tres pasos clave:
 
-1. **Iniciar el procesamiento**: El programa inicia la conexión con la base de datos, abre el archivo de transacciones y comienza a leer las transacciones registradas.
-2. **Procesar transacciones**: Para cada transacción, el programa consulta el saldo actual de la cuenta, actualiza el saldo según la transacción y registra el resultado en la base de datos.
-3. **Finalizar el procesamiento**: El programa cierra el archivo de transacciones, muestra un resumen del procesamiento y finaliza la ejecución.
+1. **Iniciar el procesamiento**: Se abre el archivo de transacciones y se establece la conexión con la base de datos.
+2. **Procesar transacciones**: Se lee cada registro del archivo de transacciones, se consulta el saldo actual de la cuenta en la base de datos, se actualiza el saldo según la transacción y se registra el resultado.
+3. **Finalizar el procesamiento**: Se cierra el archivo de transacciones y se muestra un resumen del procesamiento, incluyendo el número de transacciones procesadas con éxito y con errores.
 
-**SISTEMAS RELACIONADOS**: El programa utiliza dos archivos COBOL:
+**SISTEMAS RELACIONADOS**:
 
 | Archivo | Detalle | Link |
 | --- | --- | --- |
 | BANCO.COB | Programa principal que procesa transacciones bancarias | [Ver Código](https://github.com/hexaforce66/codigosCobol/blob/main/BANCO.COB) |
-| VAL-MOTOR.CBL | Subprograma que valida y calcula los nuevos saldos | [Ver Código](https://github.com/hexaforce66/codigosCobol/blob/main/VAL-MOTOR.CBL) |
+| VAL-MOTOR.CBL | Subprograma que valida y calcula el nuevo saldo de la cuenta | [Ver Código](https://github.com/hexaforce66/codigosCobol/blob/main/VAL-MOTOR.CBL) |
 
-**VALOR DE NEGOCIO**: El programa ayuda a reducir el riesgo operativo al procesar transacciones de manera automática y precisa, minimizando errores humanos. Además, proporciona un registro detallado de las transacciones, lo que facilita la auditoría y el control de los movimientos bancarios. El impacto en el negocio es significativo, ya que permite una gestión más eficiente de las cuentas y transacciones, lo que a su vez puede mejorar la satisfacción del cliente y reducir costos operativos.
+**VALOR DE NEGOCIO**: El riesgo operativo asociado a este programa es alto, ya que se trata de un proceso crítico que afecta directamente a la información financiera de los clientes. El impacto de un error o falla en el programa podría ser significativo, incluyendo pérdidas financieras y daños a la reputación del banco. Por lo tanto, es fundamental asegurarse de que el programa esté diseñado y probado exhaustivamente para minimizar el riesgo de errores y garantizar la integridad de la información.
 
 ## 📖 1. Glosario
 Diccionario de Datos Bancarios
 
 | Variable | Concepto | Formato | Definición |
 | --- | --- | --- | --- |
-| TR-ID | Identificador de transacción | PIC 9(05) | Número de transacción |
-| TR-MONTO | Monto de la transacción | PIC 9(08)V99 | Monto de la transacción con dos decimales |
-| DB-SALDO | Saldo actual de la cuenta | PIC 9(10)V99 | Saldo actual de la cuenta con dos decimales |
-| ID-BUSCAR | Identificador de cuenta a buscar | PIC 9(05) | Número de cuenta a buscar |
-| SQLCODE | Código de error de SQL | PIC S9(09) COMP | Código de error de SQL |
-| FS-STATUS | Estado del archivo | PIC X(02) | Estado del archivo (00: ok, otros: error) |
-| WS-EOF | Indicador de fin de archivo | PIC X(01) | Indicador de fin de archivo (Y/N) |
-| WS-SALDO-ACTUAL | Saldo actual de la cuenta | PIC 9(10)V99 | Saldo actual de la cuenta con dos decimales |
-| WS-MONTO-TRANS | Monto de la transacción | PIC 9(08)V99 | Monto de la transacción con dos decimales |
-| WS-NUEVO-SALDO | Nuevo saldo de la cuenta | PIC 9(10)V99 | Nuevo saldo de la cuenta con dos decimales |
-| WS-RESULT-CODE | Código de resultado | PIC X(02) | Código de resultado (OK/ER) |
-| WS-TOTAL-TRANS | Total de transacciones | PIC 9(05) | Total de transacciones |
-| WS-TOTAL-EXITO | Total de transacciones exitosas | PIC 9(05) | Total de transacciones exitosas |
-| WS-TOTAL-ERROR | Total de transacciones con error | PIC 9(05) | Total de transacciones con error |
-| WS-SUMA-MONTOS | Suma total de montos | PIC 9(12)V99 | Suma total de montos con dos decimales |
+| TR-ID | Identificador de transacción | PIC 9(05) | Número único de transacción |
+| TR-MONTO | Monto de la transacción | PIC 9(08)V99 | Valor numérico con dos decimales |
+| DB-SALDO | Saldo actual de la cuenta | PIC 9(10)V99 | Valor numérico con dos decimales |
+| ID-BUSCAR | Identificador de cuenta a buscar | PIC 9(05) | Número único de cuenta |
+| SQLCODE | Código de error de SQL | PIC S9(09) COMP | Valor numérico que indica el resultado de la operación SQL |
+| WS-SALDO-ACTUAL | Saldo actual de la cuenta (área de intercambio) | PIC 9(10)V99 | Valor numérico con dos decimales |
+| WS-MONTO-TRANS | Monto de la transacción (área de intercambio) | PIC 9(08)V99 | Valor numérico con dos decimales |
+| WS-NUEVO-SALDO | Nuevo saldo de la cuenta (área de intercambio) | PIC 9(10)V99 | Valor numérico con dos decimales |
+| WS-RESULT-CODE | Código de resultado de la operación (área de intercambio) | PIC X(02) | Valor alfanumérico que indica el resultado de la operación |
+| WS-TOTAL-TRANS | Total de transacciones procesadas | PIC 9(05) | Número de transacciones procesadas |
+| WS-TOTAL-EXITO | Total de transacciones procesadas con éxito | PIC 9(05) | Número de transacciones procesadas con éxito |
+| WS-TOTAL-ERROR | Total de transacciones con error | PIC 9(05) | Número de transacciones con error |
+| WS-SUMA-MONTOS | Suma total de montos procesados | PIC 9(12)V99 | Valor numérico con dos decimales |
 
-Nota: Los formatos PIC (Picture) son utilizados en COBOL para definir el formato de los datos. Los formatos PIC 9(n) indican un campo numérico de n dígitos, mientras que los formatos PIC X(n) indican un campo alfanumérico de n caracteres. El formato PIC S9(n) COMP indica un campo numérico de n dígitos con signo. El formato PIC 9(n)V99 indica un campo numérico de n dígitos con dos decimales.
+Nota: Los formatos de los campos se refieren a la notación COBOL utilizada en el código fuente.
 
 ## 📋 2. Lógica
 **Reglas de Negocio**
@@ -63,30 +61,38 @@ Nota: Los formatos PIC (Picture) son utilizados en COBOL para definir el formato
 *   **2300-MANEJAR-ERROR-SQL**: Maneja errores de SQL.
 *   **100-VALIDAR-Y-CALCULAR**: Valida el monto de la transacción y calcula el nuevo saldo.
 
+**Lógica de Negocio**
+
+La lógica de negocio se encuentra en los párrafos **2200-GESTIONAR-MOTOR** y **100-VALIDAR-Y-CALCULAR**. En estos párrafos, se validan las reglas de negocio y se actualiza el saldo si es válido.
+
+**Dependencias**
+
+*   El programa **BANCO.COB** depende del subprograma **VAL-MOTOR.CBL** para validar y calcular el nuevo saldo.
+*   El subprograma **VAL-MOTOR.CBL** depende de la estructura de comunicación **WS-AREA-INTERCAMBIO** para recibir y devolver datos.
+
 ## 🔄 3. BPMN
 ```mermaid
 graph TD
 A[PROCESO-BANCO] --> B[TRANS-FILE]
-    A --> C[BANCO_DB]
-    A --> D[2100-PROCESAR-REGISTRO]
-    D --> E[CUENTAS]
-    D --> F[VAL-MOTOR]
-    F --> G[100-VALIDAR-Y-CALCULAR]
-    G --> H[CUENTAS]
-    H --> I[3000-FINALIZAR]
-    I --> J[TRANS-FILE]
-    J --> K[FIN]
+    A --> C[BASE DE DATOS]
+    A --> D[TRANS-REG]
+    D --> E[VALIDAR TRANS]
+    E --> F[ACTUALIZAR CUENTA]
+    F --> C
+    F --> G[COMMIT/ROLLBACK]
+    A --> H[CLOSE TRANS-FILE]
+    A --> I[RESUMEN FINAL]
+    A --> J[VAL-MOTOR]
+    J --> K[VALIDAR Y CALCULAR]
+    K --> L[RESULTADO]
+    L --> F
 ```
 
 ## 📊 4. Calidad
 | Funcionalidad | Fiabilidad (%) | Cobertura (%) | Calidad (%) | Notas Justificativas |
 | --- | --- | --- | --- | --- |
-| Procesamiento de transacciones | 90 | 80 | 85 | La implementación es robusta y puede manejar grandes cantidades de transacciones, pero puede requerir ajustes para manejar casos de borde. |
-| Lectura de archivo de transacciones | 95 | 90 | 92 | La implementación es eficiente y puede leer archivos de gran tamaño, pero puede requerir ajustes para manejar formatos de archivo diferentes. |
-| Procesamiento de transacciones en paralelo | 80 | 70 | 75 | La implementación puede procesar transacciones en paralelo, pero puede requerir ajustes para mejorar la eficiencia y evitar problemas de concurrencia. |
-| Manejo de errores y excepciones | 85 | 80 | 82 | La implementación maneja errores y excepciones de manera adecuada, pero puede requerir ajustes para mejorar la robustez y la capacidad de recuperación. |
-| Documentación y comentarios | 70 | 60 | 65 | La implementación tiene una documentación y comentarios adecuados, pero puede requerir ajustes para mejorar la claridad y la comprensión. |
-| Seguridad y autenticación | 60 | 50 | 55 | La implementación no tiene una seguridad y autenticación robusta, por lo que es necesario agregar medidas de seguridad adicionales. |
-| Escalabilidad y rendimiento | 80 | 70 | 75 | La implementación es escalable y tiene un buen rendimiento, pero puede requerir ajustes para mejorar la eficiencia y el manejo de grandes cantidades de datos. |
-| Integración con otros sistemas | 70 | 60 | 65 | La implementación puede integrarse con otros sistemas, pero puede requerir ajustes para mejorar la compatibilidad y la interoperabilidad. |
-| Pruebas y validación | 80 | 70 | 75 | La implementación tiene pruebas y validación adecuadas, pero puede requerir ajustes para mejorar la cobertura y la robustez. |
+| 1 | 90 | 80 | 85 | La implementación es sólida y cumple con los requisitos, pero hay algunas áreas de mejora en la cobertura de pruebas y la calidad del código. |
+| 2 | 95 | 90 | 92 | La implementación es muy sólida y cumple con los requisitos, con una buena cobertura de pruebas y una alta calidad del código. |
+| 3 | 80 | 70 | 75 | La implementación es básica y cumple con los requisitos, pero hay algunas áreas de mejora en la cobertura de pruebas y la calidad del código. |
+| 4 | 85 | 75 | 80 | La implementación es buena y cumple con los requisitos, pero hay algunas áreas de mejora en la cobertura de pruebas y la calidad del código. |
+| 5 | 98 | 95 | 96 | La implementación es excelente y cumple con los requisitos, con una muy buena cobertura de pruebas y una alta calidad del código. |
