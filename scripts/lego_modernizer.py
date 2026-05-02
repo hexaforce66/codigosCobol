@@ -231,6 +231,10 @@ def publish_to_confluence():
         r = requests.post(
             CONFLUENCE_URL,
             auth=(CONFLUENCE_USER, CONFLUENCE_API_TOKEN),
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
             json=payload,
         )
         print(f"Status Confluence: {r.status_code}")
