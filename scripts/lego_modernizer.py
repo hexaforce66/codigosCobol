@@ -628,6 +628,22 @@ CÓDIGO ORIGINAL:
     )
     gherkin_clean = gherkin.replace("```gherkin", "").replace("```", "").strip()
 
+    
+    base = "modernized/sistema_consolidado"
+    base_java = f"{base}/src/main/java/com/bbva/modernizer"
+
+    os.makedirs(base_java, exist_ok=True)
+    os.makedirs(f"{base}/src/test/java/com/bbva/modernizer", exist_ok=True)
+    os.makedirs(f"{base}/src/test/resources/features", exist_ok=True)
+
+    for idx, contenido_clase in enumerate(clases_java):
+        nombre_match = re.search(r"(class|record|interface|enum)\s+(\w+)", contenido_clase)
+        nombre_archivo = nombre_match.group(2) if nombre_match else f"ServicePart{idx}"
+        with open(f"{base_java}/{nombre_archivo}.java", "w") as f:
+            f.write(contenido_clase.strip())
+    
+    print("🔍 Validando compilación Java...")
+    compilacion_estado, compilacion_detalle = validar_compilacion_java(base_java)
     print("📊 Generando evaluación...")
     eval_context = f"""
 COBOL ORIGINAL:
@@ -656,20 +672,6 @@ COMPILACIÓN JAVA:
         prompt_eval_modular,
         eval_context,
     )
-    base = "modernized/sistema_consolidado"
-    base_java = f"{base}/src/main/java/com/bbva/modernizer"
-
-    os.makedirs(base_java, exist_ok=True)
-    os.makedirs(f"{base}/src/test/java/com/bbva/modernizer", exist_ok=True)
-    os.makedirs(f"{base}/src/test/resources/features", exist_ok=True)
-
-    for idx, contenido_clase in enumerate(clases_java):
-        nombre_match = re.search(r"(class|record|interface|enum)\s+(\w+)", contenido_clase)
-        nombre_archivo = nombre_match.group(2) if nombre_match else f"ServicePart{idx}"
-        with open(f"{base_java}/{nombre_archivo}.java", "w") as f:
-            f.write(contenido_clase.strip())
-            print("🔍 Validando compilación Java...")
-            compilacion_estado, compilacion_detalle = validar_compilacion_java(base_java)
 
     tests_extraidos = extraer_unidades_java(test_raw)
 
