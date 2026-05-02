@@ -237,11 +237,12 @@ def publish_to_confluence():
                 "X-Atlassian-Token": "no-check",
             },
             json=payload,
-            allow_redirects=False,
+            allow_redirects=False,   # 🔥 CLAVE
         )
-        print(f"Status Confluence: {r.status_code}")
-        print(f"Respuesta Confluence: {r.text[:2000]}")
-
+        print("Status Confluence:", r.status_code)
+        print("Headers:", r.headers)
+        print("Location:", r.headers.get("Location"))
+        print("Respuesta:", r.text[:500])
         try:
             data = r.json()
             base_url = data.get("_links", {}).get("base", "")
