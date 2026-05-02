@@ -234,7 +234,6 @@ def publish_to_confluence():
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "X-Atlassian-Token": "no-check",
             },
             json=payload,
             allow_redirects=False,   # 🔥 CLAVE
