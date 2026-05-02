@@ -236,6 +236,51 @@ def publish_to_confluence():
 
         print(f"Status Confluence: {r.status_code} | Reporte: {titulo}")
 
+def extraer_unidades_java(java_raw):
+    bloques = re.findall(r"```java\s*([\s\S]*?)\s*```", java_raw)
+
+    unidades = []
+
+    for bloque in bloques:
+        bloque = bloque.strip()
+
+        # Si el bloque ya tiene una sola unidad, lo dejamos.
+        declaraciones = list(
+            re.finditer(
+                r"(?m)^(public\s+)?(class|record|interface|enum)\s+(\w+)",
+                bloque,
+            )
+        )
+
+        if len(declaraciones) <= 1:
+            unidades.append(bloque)
+            continue
+
+        # Extraer package e imports comunes.
+        package_match = re.search(r"(?m)^package\s+[\w.]+;\s*", bloque)
+        package_line = package_match.group(0).strip() if package_match else "package com.bbva.modernizer;"
+
+        imports = re.findall(r"(?m)^import\s+[^;]+;", bloque)
+        imports_text = "\n".join(imports)
+
+        # Cortar cada unidad desde su declaración hasta antes de la siguiente.
+        for i, dec in enumerate(declaraciones):
+            start = dec.start()
+            end = declaraciones[i + 1].start() if i + 1 < len(declaraciones) else len(bloque)
+            unidad = bloque[start:end].strip()
+
+            # Quitar package/imports duplicados dentro de la unidad.
+            unidad = re.sub(r"(?m)^package\s+[\w.]+;\s*", "", unidad).strip()
+            unidad = re.sub(r"(?m)^import\s+[^;]+;\s*", "", unidad).strip()
+
+            final = package_line + "\n\n"
+            if imports_text:
+                final += imports_text + "\n\n"
+            final += unidad
+
+            unidades.append(final.strip())
+
+    return unidades
 
 def main():
     print("🚀 LEGO Modernizer v3.20 - Original Prompts + 2 BPMN")
@@ -388,31 +433,27 @@ def main():
         "Generar código Java funcionalmente equivalente al COBOL analizado.\n\n"
         "REGLAS CRÍTICAS:\n"
         "1. El código debe compilar en Java 17.\n"
-        "2. Cada bloque ```java``` debe contener UNA SOLA clase, record, enum o interface pública.\n"
-        "3. No pongas varias clases public en un mismo archivo.\n"
-        "4. Incluye package com.bbva.modernizer; en cada clase.\n"
-        "5. Incluye todos los imports necesarios.\n"
-        "6. No uses Spring, @Service, @Autowired, repositories ni frameworks si no generas también sus clases.\n"
-        "7. No uses métodos genéricos como isValid(), process() o validate() sin implementar lógica real.\n"
-        "8. Cada IF, EVALUATE, PERFORM, COMPUTE, ADD, SUBTRACT, MULTIPLY o DIVIDE relevante del COBOL debe reflejarse en Java.\n"
-        "9. Cada código de retorno, flag, estado o resultado COBOL debe modelarse como enum o constante.\n"
-        "10. Usa exactamente los valores COBOL originales cuando existan, por ejemplo A/B/C, Y/N, L/M/H, no los traduzcas a ACTIVE/BLOCKED salvo que el COBOL lo use así.\n"
-        "11. No inventes reglas que no estén en el COBOL o en las reglas detectadas.\n"
-        "12. No omitas reglas por simplicidad.\n\n"
-        "ARQUITECTURA:\n"
-        "1. Genera un orquestador principal para el flujo principal.\n"
-        "2. Genera una clase Java por cada subprograma COBOL detectado mediante CALL.\n"
-        "3. Convierte COPYBOOKS, DATA DIVISION y LINKAGE SECTION en records o DTOs.\n"
-        "4. Si hay JCL, genera un BatchOrchestrator simple que simule lectura, proceso y escritura.\n"
-        "5. Separa validaciones, cálculos, reglas y logging en clases distintas.\n\n"
-        "VALIDACIÓN FUNCIONAL:\n"
-        "1. Implementa explícitamente validaciones de campos obligatorios.\n"
-        "2. Implementa estados, flags, importes, límites, saldos, monedas y cálculos tal como aparezcan en COBOL.\n"
-        "3. Implementa todos los caminos de aprobación, rechazo, error o revisión detectados.\n"
-        "4. Si una regla no puede implementarse por falta de información, crea un método TODO con comentario claro, pero no inventes comportamiento.\n\n"
+        "2. Cada bloque ```java``` debe contener EXACTAMENTE UNA sola declaración top-level pública.\n"
+        "3. No incluyas más de una class, record, enum o interface por bloque.\n"
+        "4. Si necesitas Account, AccountStatus, Customer, Payment, ReturnCode, etc., cada uno debe ir en su propio bloque ```java``` separado.\n"
+        "5. Incluye package com.bbva.modernizer; en cada bloque.\n"
+        "6. Incluye todos los imports necesarios en cada bloque.\n"
+        "7. No uses Spring, @Service, @Autowired, repositories ni frameworks.\n"
+        "8. No uses métodos genéricos como isValid(), process() o validate() sin implementar lógica real.\n"
+        "9. Cada IF, EVALUATE, PERFORM, COMPUTE, ADD, SUBTRACT, MULTIPLY o DIVIDE relevante del COBOL debe reflejarse en Java.\n"
+        "10. Cada código de retorno, flag, estado o resultado COBOL debe modelarse como enum o constante.\n"
+        "11. Usa exactamente los valores COBOL originales cuando existan, por ejemplo A/B/C, Y/N, L/M/H.\n"
+        "12. No traduzcas códigos COBOL a OPEN, ACTIVE, LOW, etc. si el COBOL usa valores codificados.\n"
+        "13. No inventes reglas que no estén en el COBOL o en las reglas detectadas.\n"
+        "14. No omitas reglas por simplicidad.\n\n"
+        "VALIDACIONES OBLIGATORIAS:\n"
+        "- Implementa campos obligatorios.\n"
+        "- Implementa estados, flags, importes, límites, saldos, monedas y cálculos tal como aparezcan en COBOL.\n"
+        "- Implementa todos los caminos de aprobación, rechazo, error o revisión detectados.\n"
+        "- Si hay comparación de moneda, saldo, límite o KYC en COBOL, debe existir explícitamente en Java.\n\n"
         "SALIDA:\n"
         "Devuelve únicamente bloques ```java ... ```.\n"
-        "Cada bloque debe ser una clase/record/enum independiente y compilable."
+        "Cada bloque debe contener una sola clase, record, enum o interface pública e independiente."
     )
 
     test_modular_prompt = (
@@ -505,7 +546,7 @@ CÓDIGO ORIGINAL:
 
     print("☕ Generando Java...")
     java_modular_raw = call_agent("Arquitecto Java", java_modular_prompt, contexto_java)
-    clases_java = re.findall(r"```java\s*([\s\S]*?)\s*```", java_modular_raw)
+    clases_java = extraer_unidades_java(java_modular_raw)
 
     contexto_tests = f"""
 REGLAS DE NEGOCIO DETECTADAS:
@@ -549,9 +590,18 @@ CÓDIGO ORIGINAL:
         with open(f"{base_java}/{nombre_archivo}.java", "w") as f:
             f.write(contenido_clase.strip())
 
-    with open(f"{base}/src/test/java/com/bbva/modernizer/ModernizedSystemTest.java", "w") as f:
-        f.write(test)
+    tests_extraidos = extraer_unidades_java(test_raw)
 
+    if tests_extraidos:
+        for idx, contenido_test in enumerate(tests_extraidos):
+            nombre_match = re.search(r"(class|record|interface|enum)\s+(\w+)", contenido_test)
+            nombre_archivo = nombre_match.group(2) if nombre_match else f"ModernizedSystemTest{idx}"
+            with open(f"{base}/src/test/java/com/bbva/modernizer/{nombre_archivo}.java", "w") as f:
+                f.write(contenido_test.strip())
+    else:
+        with open(f"{base}/src/test/java/com/bbva/modernizer/ModernizedSystemTest.java", "w") as f:
+            f.write(test)
+            
     with open(f"{base}/src/test/resources/features/sistema_consolidado.feature", "w") as f:
         f.write(gherkin_clean)
 
