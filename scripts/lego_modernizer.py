@@ -630,32 +630,32 @@ CÓDIGO ORIGINAL:
 
     print("📊 Generando evaluación...")
     eval_context = f"""
-        COBOL ORIGINAL:
-        {codigo_completo}
+COBOL ORIGINAL:
+{codigo_completo}
 
-        REGLAS EXTRAÍDAS:
-        {logic}
+REGLAS EXTRAÍDAS:
+{logic}
 
-        JAVA GENERADO:
-        {java_modular_raw}
+JAVA GENERADO:
+{java_modular_raw}
 
-        TESTS GENERADOS:
-        {test}
+TESTS GENERADOS:
+{test}
 
-        GHERKIN GENERADO:
-        {gherkin_clean}
+GHERKIN GENERADO:
+{gherkin_clean}
 
-        COMPILACIÓN JAVA:
-        {compilacion_estado}
-        {compilacion_detalle}
-        """
+COMPILACIÓN JAVA:
+{compilacion_estado}
+{compilacion_detalle}
+"""
 
-        eval_tabla = call_agent(
-            "Auditor Técnico de Migración",
-            prompt_eval_modular,
-            eval_context
-        )
-
+    print("📊 Generando evaluación...")
+    eval_tabla = call_agent(
+        "Auditor Técnico de Migración",
+        prompt_eval_modular,
+        eval_context,
+    )
     base = "modernized/sistema_consolidado"
     base_java = f"{base}/src/main/java/com/bbva/modernizer"
 
