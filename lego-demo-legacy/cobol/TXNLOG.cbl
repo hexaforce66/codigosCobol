@@ -1,0 +1,20 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. TXNLOG.
+
+       DATA DIVISION.
+       LINKAGE SECTION.
+       COPY PAYMENT.
+       COPY RETURN_CODES.
+       01  LK-AUDIT-LINE          PIC X(160).
+
+       PROCEDURE DIVISION USING PAYMENT-RECORD RETURN-AREA LK-AUDIT-LINE.
+       BUILD-AUDIT-LINE.
+           STRING 'PAY-ID=' PAY-ID
+                  ';CUSTOMER=' PAY-CUSTOMER-ID
+                  ';ACCOUNT=' PAY-ACCOUNT-ID
+                  ';AMOUNT=' PAY-AMOUNT
+                  ';RETURN=' RETURN-CODE
+                  ';RISK=' RETURN-RISK-SCORE
+                  ';MESSAGE=' RETURN-MESSAGE
+                  DELIMITED BY SIZE INTO LK-AUDIT-LINE
+           GOBACK.

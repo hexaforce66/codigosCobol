@@ -1,0 +1,20 @@
+//PAYDAY   JOB (BBVA),'DAILY PAYMENTS',CLASS=A,MSGCLASS=X,NOTIFY=&SYSUID
+//* ------------------------------------------------------------------
+//* DAILY PAYMENT VALIDATION BATCH
+//* Executes PAYMAIN to validate payment instructions and generate
+//* approved, rejected and audit output files.
+//* ------------------------------------------------------------------
+//STEP01   EXEC PGM=PAYMAIN
+//STEPLIB  DD DSN=BBVA.LEGO.LOADLIB,DISP=SHR
+//PAYIN    DD DSN=BBVA.PAYMENTS.DAILY.INPUT,DISP=SHR
+//CUSTIN   DD DSN=BBVA.CUSTOMER.MASTER,DISP=SHR
+//ACCTIN   DD DSN=BBVA.ACCOUNT.MASTER,DISP=SHR
+//PAYOK    DD DSN=BBVA.PAYMENTS.APPROVED,DISP=(NEW,CATLG,DELETE),
+//            SPACE=(CYL,(5,2)),UNIT=SYSDA
+//PAYREJ   DD DSN=BBVA.PAYMENTS.REJECTED,DISP=(NEW,CATLG,DELETE),
+//            SPACE=(CYL,(5,2)),UNIT=SYSDA
+//AUDITOUT DD DSN=BBVA.PAYMENTS.AUDIT.LOG,DISP=(NEW,CATLG,DELETE),
+//            SPACE=(CYL,(5,2)),UNIT=SYSDA
+//SYSOUT   DD SYSOUT=*
+//SYSPRINT DD SYSOUT=*
+//SYSIN    DD DUMMY
