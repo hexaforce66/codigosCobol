@@ -233,6 +233,18 @@ def publish_to_confluence():
             auth=(CONFLUENCE_USER, CONFLUENCE_API_TOKEN),
             json=payload,
         )
+        print(f"Status Confluence: {r.status_code}")
+        print(f"Respuesta Confluence: {r.text[:2000]}")
+
+        try:
+            data = r.json()
+            base_url = data.get("_links", {}).get("base", "")
+            webui = data.get("_links", {}).get("webui", "")
+            print("URL Confluence:", base_url + webui)
+        except Exception as e:
+            print("No se pudo leer URL Confluence:", e)
+
+        print(f"Reporte: {titulo}")
 
         print(f"Status Confluence: {r.status_code} | Reporte: {titulo}")
 
@@ -516,16 +528,33 @@ def main():
     )
 
     prompt_eval_modular = (
-        "Genera EXCLUSIVAMENTE una tabla Markdown. NO añadas texto introductorio ni conclusiones.\n"
-        "Formato: | Funcionalidad | Fiabilidad (%) | Cobertura (%) | Calidad (%) | Notas Justificativas |\n"
-        "| --- | --- | --- | --- | --- |\n"
-        "REGLA DE ORO PARA NOTAS: Redacta para perfiles de Negocio. "
-        "En lugar de 'alta complejidad ciclomática', escribe 'código difícil de modificar'. "
-        "En lugar de 'falta de inyección de dependencias', escribe 'arquitectura rígida que dificulta futuras actualizaciones'. "
-        "Enfócate en riesgos, mantenibilidad y beneficios de negocio.\n"
-        "ESPECÍFICO MODULAR: Evalúa si el Java generado replica la lógica COBOL. "
-        "Penaliza si hay métodos genéricos sin implementación, clases que no compilan, reglas de negocio omitidas o códigos de retorno no implementados. "
-        "Evalúa trazabilidad COBOL -> regla -> Java -> test."
+        "Actúa como un auditor técnico de migraciones COBOL a Java.\n\n"
+        "Evalúa comparando explícitamente:\n"
+        "1. Código COBOL original.\n"
+        "2. Reglas de negocio extraídas.\n"
+        "3. Código Java generado.\n"
+        "4. Tests unitarios generados.\n"
+        "5. Escenarios Gherkin generados.\n"
+        "6. Resultado de compilación Java.\n\n"
+        "Genera EXCLUSIVAMENTE una tabla Markdown con este formato:\n"
+        "| Métrica | Porcentaje | Evidencia | Brechas detectadas | Recomendación |\n"
+        "| --- | --- | --- | --- | --- |\n\n"
+        "Incluye estas filas obligatorias:\n"
+        "1. Fidelidad Java vs COBOL\n"
+        "2. Cobertura de reglas por tests\n"
+        "3. Cobertura funcional Gherkin\n"
+        "4. Calidad del código Java\n"
+        "5. Madurez general para revisión humana\n\n"
+        "CRITERIOS:\n"
+        "- Fidelidad mide si el Java implementa las mismas reglas, decisiones, cálculos, estados y códigos que COBOL.\n"
+        "- Cobertura de tests mide si cada regla COBOL tiene al menos un test unitario.\n"
+        "- Cobertura Gherkin mide si los escenarios cubren flujo feliz, errores y casos borde.\n"
+        "- Calidad mide compilación, separación de clases, imports, claridad, duplicidad y mantenibilidad.\n"
+        "- Madurez general combina fidelidad, cobertura y calidad.\n\n"
+        "REGLA IMPORTANTE:\n"
+        "No asignes porcentajes optimistas sin evidencia. "
+        "Si falta una regla, test, import, código de retorno o validación, baja el porcentaje y dilo en Brechas detectadas. "
+        "Redacta para negocio y tecnología."
     )
 
     print("🧠 Generando resumen...")
@@ -600,11 +629,32 @@ CÓDIGO ORIGINAL:
     gherkin_clean = gherkin.replace("```gherkin", "").replace("```", "").strip()
 
     print("📊 Generando evaluación...")
-    eval_tabla = call_agent(
-        "Analista de Calidad Senior",
-        prompt_eval_modular,
-        java_modular_raw + "\n\n" + test + "\n\n" + gherkin_clean,
-    )
+    eval_context = f"""
+        COBOL ORIGINAL:
+        {codigo_completo}
+
+        REGLAS EXTRAÍDAS:
+        {logic}
+
+        JAVA GENERADO:
+        {java_modular_raw}
+
+        TESTS GENERADOS:
+        {test}
+
+        GHERKIN GENERADO:
+        {gherkin_clean}
+
+        COMPILACIÓN JAVA:
+        {compilacion_estado}
+        {compilacion_detalle}
+        """
+
+        eval_tabla = call_agent(
+            "Auditor Técnico de Migración",
+            prompt_eval_modular,
+            eval_context
+        )
 
     base = "modernized/sistema_consolidado"
     base_java = f"{base}/src/main/java/com/bbva/modernizer"
