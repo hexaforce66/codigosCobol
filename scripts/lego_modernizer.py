@@ -282,6 +282,31 @@ def extraer_unidades_java(java_raw):
 
     return unidades
 
+def validar_compilacion_java(base_java):
+    java_files = []
+    for root, _, files in os.walk(base_java):
+        for file in files:
+            if file.endswith(".java"):
+                java_files.append(os.path.join(root, file))
+
+    if not java_files:
+        return "ERROR", "No se generaron archivos Java."
+
+    build_dir = "modernized/build/classes"
+    os.makedirs(build_dir, exist_ok=True)
+
+    cmd = f"javac -d {build_dir} " + " ".join(java_files)
+    result = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+
+    if result.returncode == 0:
+        return "OK", "El código Java generado compila correctamente."
+
+    error_msg = result.stderr.strip()
+    if len(error_msg) > 3000:
+        error_msg = error_msg[:3000] + "\n... salida truncada ..."
+
+    return "ERROR", error_msg
+
 def main():
     print("🚀 LEGO Modernizer v3.20 - Original Prompts + 2 BPMN")
 
@@ -445,7 +470,11 @@ def main():
         "11. Usa exactamente los valores COBOL originales cuando existan, por ejemplo A/B/C, Y/N, L/M/H.\n"
         "12. No traduzcas códigos COBOL a OPEN, ACTIVE, LOW, etc. si el COBOL usa valores codificados.\n"
         "13. No inventes reglas que no estén en el COBOL o en las reglas detectadas.\n"
-        "14. No omitas reglas por simplicidad.\n\n"
+        "14. No omitas reglas por simplicidad.\n"
+        "15. Si un código COBOL tiene más de un carácter, debe modelarse como String, no como char.\n"
+        "16. Ejemplo correcto: APPROVED(\"0000\"), no APPROVED('0000').\n"
+        "17. Cada clase debe incluir todos sus imports propios.\n"
+        "18. Si usa BigDecimal, LocalDate, List, Map, Optional o Set, importa explícitamente java.math.BigDecimal, java.time.LocalDate, java.util.*, etc.\n\n"
         "VALIDACIONES OBLIGATORIAS:\n"
         "- Implementa campos obligatorios.\n"
         "- Implementa estados, flags, importes, límites, saldos, monedas y cálculos tal como aparezcan en COBOL.\n"
@@ -589,6 +618,8 @@ CÓDIGO ORIGINAL:
         nombre_archivo = nombre_match.group(2) if nombre_match else f"ServicePart{idx}"
         with open(f"{base_java}/{nombre_archivo}.java", "w") as f:
             f.write(contenido_clase.strip())
+            print("🔍 Validando compilación Java...")
+            compilacion_estado, compilacion_detalle = validar_compilacion_java(base_java)
 
     tests_extraidos = extraer_unidades_java(test_raw)
 
@@ -624,7 +655,11 @@ CÓDIGO ORIGINAL:
             f"Este diagrama muestra JCL, programas COBOL, CALLs, COPYBOOKS, validaciones y archivos.\n\n"
             f"```mermaid\n{bpmn_detallado}\n```\n\n"
             f"---\n\n"
-            f"## 📊 5. Matriz de Calidad y Madurez\n{eval_tabla}\n\n"
+            f"---\n\n"
+            f"## ✅ 5. Validación Técnica Java\n\n"
+            f"**Compilación Java:** {compilacion_estado}\n\n"
+            f"```text\n{compilacion_detalle}\n```\n\n"
+            f"## 📊 6. Matriz de Calidad y Madurez\n{eval_tabla}\n\n"
             f"---\n\n"
             f"## 🧪 6. Escenarios Gherkin Generados\n\n"
             f"```gherkin\n{gherkin_clean}\n```\n"
