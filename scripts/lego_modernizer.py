@@ -149,7 +149,13 @@ def procesar_texto_ia(texto_ia, lista_archivos):
             rf"[\1]({SOURCE_REPO_URL}{ruta_limpia})",
             t,
         )
+        t = re.sub(
+            rf"\({re.escape(SOURCE_REPO_URL)}[^\)]*{re.escape(nombre)}\)",
+            f"({SOURCE_REPO_URL}{ruta_limpia})",
+            t,
+        )
         t = t.replace(arch.replace("\\", "/"), ruta_limpia)
+        
 
     return t
 
