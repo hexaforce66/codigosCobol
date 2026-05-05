@@ -140,7 +140,7 @@ def procesar_texto_ia(texto_ia, lista_archivos):
     for arch in lista_archivos:
         ruta_limpia = normalizar_ruta_archivo(arch)
         nombre = os.path.basename(arch)
-        link_real = f"[Ver Código]({SOURCE_REPO_URL}{ruta_limpia})"
+        link_real = f"[Ver Código]({SOURCE_REPO_URL}/lego-demo-legacy/{ruta_limpia})"
 
         t = t.replace(placeholder_md, link_real)
         t = t.replace(placeholder_ver_codigo, link_real)
