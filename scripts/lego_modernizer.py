@@ -32,7 +32,7 @@ CONFLUENCE_API_TOKEN = os.getenv("CONFLUENCE_API_TOKEN")
 SPACE_KEY = os.getenv("SPACE_KEY")
 PARENT_PAGE_ID = os.getenv("PARENT_PAGE_ID")
 
-
+REPO_ROOT = os.getcwd()
 bedrock = boto3.client(
     service_name="bedrock-runtime",
     region_name=AWS_REGION,
@@ -61,7 +61,8 @@ def extraer_codigo_puro(texto):
 
 
 def normalizar_ruta_archivo(arch):
-    ruta = arch.replace("\\", "/").lstrip("./")
+    ruta = os.path.relpath(arch, REPO_ROOT)
+    ruta = ruta.replace("\\", "/")
     return "/" + ruta
 
 
