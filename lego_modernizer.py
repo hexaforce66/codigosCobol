@@ -176,7 +176,7 @@ def scan_legacy_files():
 
 def publish_to_github():
     if not GITHUB_TOKEN or not REPO_NAME:
-        print("⚠️ GITHUB_TOKEN o REPO_NAME no configurado. Se omite push a GitHub.")
+        print("⚠️ GITHUB_TOKEN o REPO_NAME no configurado. Se omite push a GitHub. ")
         return
 
     if os.path.exists("repo_destino"):
