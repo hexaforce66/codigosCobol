@@ -356,6 +356,7 @@ def main():
         raise RuntimeError("No se encontraron archivos .CBL, .COB, .CPY o .JCL")
 
     archivos_visibles = [normalizar_ruta_archivo(a) for a in archivos_repo]
+    archivos_bpmn = [os.path.basename(a) for a in archivos_repo]
     archivos_str = ", ".join(archivos_visibles)
 
     codigo_completo = ""
@@ -390,6 +391,17 @@ def main():
 """
 
     contexto_legacy = dependencias_detectadas + "\n\n" + codigo_completo
+    contexto_bpmn = f"""
+DEPENDENCIAS:
+- Programas ejecutados por JCL: {", ".join(sorted(jcl_programas)) or "No detectados"}
+- Subprogramas llamados por COBOL: {", ".join(sorted(calls_detectados)) or "No detectados"}
+- Copybooks referenciados: {", ".join(sorted(copybooks_detectados)) or "No detectados"}
+- DD names detectados en JCL: {", ".join(sorted(dd_names)) or "No detectados"}
+- Archivos: {", ".join(archivos_bpmn) or "No detectados"}
+
+CODIGO ORIGINAL:
+{codigo_completo}
+"""
 
     instruccion_directa = (
         "REGLA CRÍTICA: Responde DIRECTAMENTE con el contenido útil. "
@@ -616,7 +628,7 @@ def main():
 
     print("🧬 Generando BPMN detallado...")
     bpmn_detallado = limpiar_mermaid_seguro(
-    call_agent("BPMN Detallado", bpmn_detallado_prompt, contexto_legacy)
+    call_agent("BPMN Detallado", bpmn_detallado_prompt, contexto_bpmn)
     )
 
     contexto_java = f"""
