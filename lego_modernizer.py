@@ -152,33 +152,7 @@ def procesar_texto_ia(texto_ia, lista_archivos):
 
     return t
 
-def limpiar_mermaid_seguro(texto):
-    texto = limpiar_mermaid_base(
-        texto,
-        node_spacing=120,
-        rank_spacing=180,
-        font_size="13px"
-    )
 
-    lineas = []
-
-    for linea in texto.splitlines():
-        linea = linea.strip()
-
-        if not linea:
-            continue
-
-        # Evitar headers repetidos
-        if linea.lower().startswith("flowchart ") and lineas:
-            continue
-
-        if linea.lower().startswith("graph ") and lineas:
-            continue
-
-        lineas.append(linea)
-
-    return "\n".join(lineas)
-    
 def mermaid_img_url(code):
     data = {"code": code, "mermaid": {"theme": "default"}}
     compressed = zlib.compress(json.dumps(data).encode("utf-8"), level=9)
@@ -202,7 +176,7 @@ def scan_legacy_files():
 
 def publish_to_github():
     if not GITHUB_TOKEN or not REPO_NAME:
-        print("⚠️ GITHUB_TOKEN o REPO_NAME no configurado. Se omite push a GitHub. ")
+        print("⚠️ GITHUB_TOKEN o REPO_NAME no configurado. Se omite push a GitHub.")
         return
 
     if os.path.exists("repo_destino"):
@@ -254,99 +228,11 @@ def publish_to_confluence():
         r = requests.post(
             CONFLUENCE_URL,
             auth=(CONFLUENCE_USER, CONFLUENCE_API_TOKEN),
-            headers={
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-            },
             json=payload,
-            allow_redirects=False,   # 🔥 CLAVE
         )
-        print("Status Confluence:", r.status_code)
-        print("Headers:", r.headers)
-        print("Location:", r.headers.get("Location"))
-        print("Respuesta:", r.text[:500])
-        try:
-            data = r.json()
-            base_url = data.get("_links", {}).get("base", "")
-            webui = data.get("_links", {}).get("webui", "")
-            print("URL Confluence:", base_url + webui)
-        except Exception as e:
-            print("No se pudo leer URL Confluence:", e)
-
-        print(f"Reporte: {titulo}")
 
         print(f"Status Confluence: {r.status_code} | Reporte: {titulo}")
 
-def extraer_unidades_java(java_raw):
-    bloques = re.findall(r"```java\s*([\s\S]*?)\s*```", java_raw)
-
-    unidades = []
-
-    for bloque in bloques:
-        bloque = bloque.strip()
-
-        # Si el bloque ya tiene una sola unidad, lo dejamos.
-        declaraciones = list(
-            re.finditer(
-                r"(?m)^(public\s+)?(class|record|interface|enum)\s+(\w+)",
-                bloque,
-            )
-        )
-
-        if len(declaraciones) <= 1:
-            unidades.append(bloque)
-            continue
-
-        # Extraer package e imports comunes.
-        package_match = re.search(r"(?m)^package\s+[\w.]+;\s*", bloque)
-        package_line = package_match.group(0).strip() if package_match else "package com.bbva.modernizer;"
-
-        imports = re.findall(r"(?m)^import\s+[^;]+;", bloque)
-        imports_text = "\n".join(imports)
-
-        # Cortar cada unidad desde su declaración hasta antes de la siguiente.
-        for i, dec in enumerate(declaraciones):
-            start = dec.start()
-            end = declaraciones[i + 1].start() if i + 1 < len(declaraciones) else len(bloque)
-            unidad = bloque[start:end].strip()
-
-            # Quitar package/imports duplicados dentro de la unidad.
-            unidad = re.sub(r"(?m)^package\s+[\w.]+;\s*", "", unidad).strip()
-            unidad = re.sub(r"(?m)^import\s+[^;]+;\s*", "", unidad).strip()
-
-            final = package_line + "\n\n"
-            if imports_text:
-                final += imports_text + "\n\n"
-            final += unidad
-
-            unidades.append(final.strip())
-
-    return unidades
-
-def validar_compilacion_java(base_java):
-    java_files = []
-    for root, _, files in os.walk(base_java):
-        for file in files:
-            if file.endswith(".java"):
-                java_files.append(os.path.join(root, file))
-
-    if not java_files:
-        return "ERROR", "No se generaron archivos Java."
-
-    build_dir = "modernized/build/classes"
-    os.makedirs(build_dir, exist_ok=True)
-
-    cmd = f"javac -d {build_dir} " + " ".join(java_files)
-    result = subprocess.run(cmd, shell=True, text=True, capture_output=True)
-
-    if result.returncode == 0:
-        return "OK", "El código Java generado compila correctamente."
-
-    error_msg = result.stderr.strip()
-    if len(error_msg) > 3000:
-        error_msg = error_msg[:3000] + "\n... salida truncada ..."
-
-    return "ERROR", error_msg
 
 def main():
     print("🚀 LEGO Modernizer v3.20 - Original Prompts + 2 BPMN")
@@ -356,8 +242,9 @@ def main():
         raise RuntimeError("No se encontraron archivos .CBL, .COB, .CPY o .JCL")
 
     archivos_visibles = [normalizar_ruta_archivo(a) for a in archivos_repo]
-    archivos_bpmn = [os.path.basename(a) for a in archivos_repo]
     archivos_str = ", ".join(archivos_visibles)
+    archivos_bpmn = [os.path.basename(a) for a in archivos_repo]
+    archivos_bpmn_str = ", ".join(archivos_bpmn)
 
     codigo_completo = ""
     calls_detectados = set()
@@ -391,17 +278,17 @@ def main():
 """
 
     contexto_legacy = dependencias_detectadas + "\n\n" + codigo_completo
-    contexto_bpmn = f"""
-DEPENDENCIAS:
+    dependencias_bpmn = f"""
+## Dependencias técnicas detectadas automáticamente
+
 - Programas ejecutados por JCL: {", ".join(sorted(jcl_programas)) or "No detectados"}
 - Subprogramas llamados por COBOL: {", ".join(sorted(calls_detectados)) or "No detectados"}
 - Copybooks referenciados: {", ".join(sorted(copybooks_detectados)) or "No detectados"}
 - DD names detectados en JCL: {", ".join(sorted(dd_names)) or "No detectados"}
-- Archivos: {", ".join(archivos_bpmn) or "No detectados"}
-
-CODIGO ORIGINAL:
-{codigo_completo}
+- Archivos incluidos en el análisis: {archivos_bpmn_str or "No detectados"}
 """
+
+contexto_bpmn = dependencias_bpmn + "\n\n" + codigo_completo
 
     instruccion_directa = (
         "REGLA CRÍTICA: Responde DIRECTAMENTE con el contenido útil. "
@@ -489,10 +376,8 @@ CODIGO ORIGINAL:
         "8. Incluye acciones como rectángulos A[Accion].\n"
         "9. No uses etiquetas en flechas. Solo '-->'.\n"
         "10. Usa nombres cortos pero específicos.\n"
-        "11. Máximo 30 nodos. Prioriza las dependencias y decisiones más importantes.\n"
-        "12. Usa IDs simples sin espacios ni símbolos: A1, A2, B1, B2.\n"
-        "13. El texto visible dentro de nodos debe ser corto y sin caracteres especiales.\n"
-        "14. Evita texto largo en nodos. Máximo 5 palabras.\n\n"
+        "11. No limites el diagrama a 12 nodos. Prioriza completitud.\n"
+        "12. Evita texto largo en nodos. Máximo 5 palabras.\n\n"
         "ESTRUCTURA ESPERADA:\n"
         "subgraph JCL\n"
         "direction TB\n"
@@ -513,31 +398,31 @@ CODIGO ORIGINAL:
         "Generar código Java funcionalmente equivalente al COBOL analizado.\n\n"
         "REGLAS CRÍTICAS:\n"
         "1. El código debe compilar en Java 17.\n"
-        "2. Cada bloque ```java``` debe contener EXACTAMENTE UNA sola declaración top-level pública.\n"
-        "3. No incluyas más de una class, record, enum o interface por bloque.\n"
-        "4. Si necesitas Account, AccountStatus, Customer, Payment, ReturnCode, etc., cada uno debe ir en su propio bloque ```java``` separado.\n"
-        "5. Incluye package com.bbva.modernizer; en cada bloque.\n"
-        "6. Incluye todos los imports necesarios en cada bloque.\n"
-        "7. No uses Spring, @Service, @Autowired, repositories ni frameworks.\n"
-        "8. No uses métodos genéricos como isValid(), process() o validate() sin implementar lógica real.\n"
-        "9. Cada IF, EVALUATE, PERFORM, COMPUTE, ADD, SUBTRACT, MULTIPLY o DIVIDE relevante del COBOL debe reflejarse en Java.\n"
-        "10. Cada código de retorno, flag, estado o resultado COBOL debe modelarse como enum o constante.\n"
-        "11. Usa exactamente los valores COBOL originales cuando existan, por ejemplo A/B/C, Y/N, L/M/H.\n"
-        "12. No traduzcas códigos COBOL a OPEN, ACTIVE, LOW, etc. si el COBOL usa valores codificados.\n"
-        "13. No inventes reglas que no estén en el COBOL o en las reglas detectadas.\n"
-        "14. No omitas reglas por simplicidad.\n"
-        "15. Si un código COBOL tiene más de un carácter, debe modelarse como String, no como char.\n"
-        "16. Ejemplo correcto: APPROVED(\"0000\"), no APPROVED('0000').\n"
-        "17. Cada clase debe incluir todos sus imports propios.\n"
-        "18. Si usa BigDecimal, LocalDate, List, Map, Optional o Set, importa explícitamente java.math.BigDecimal, java.time.LocalDate, java.util.*, etc.\n\n"
-        "VALIDACIONES OBLIGATORIAS:\n"
-        "- Implementa campos obligatorios.\n"
-        "- Implementa estados, flags, importes, límites, saldos, monedas y cálculos tal como aparezcan en COBOL.\n"
-        "- Implementa todos los caminos de aprobación, rechazo, error o revisión detectados.\n"
-        "- Si hay comparación de moneda, saldo, límite o KYC en COBOL, debe existir explícitamente en Java.\n\n"
+        "2. Cada bloque ```java``` debe contener UNA SOLA clase, record, enum o interface pública.\n"
+        "3. No pongas varias clases public en un mismo archivo.\n"
+        "4. Incluye package com.bbva.modernizer; en cada clase.\n"
+        "5. Incluye todos los imports necesarios.\n"
+        "6. No uses Spring, @Service, @Autowired, repositories ni frameworks si no generas también sus clases.\n"
+        "7. No uses métodos genéricos como isValid(), process() o validate() sin implementar lógica real.\n"
+        "8. Cada IF, EVALUATE, PERFORM, COMPUTE, ADD, SUBTRACT, MULTIPLY o DIVIDE relevante del COBOL debe reflejarse en Java.\n"
+        "9. Cada código de retorno, flag, estado o resultado COBOL debe modelarse como enum o constante.\n"
+        "10. Usa exactamente los valores COBOL originales cuando existan, por ejemplo A/B/C, Y/N, L/M/H, no los traduzcas a ACTIVE/BLOCKED salvo que el COBOL lo use así.\n"
+        "11. No inventes reglas que no estén en el COBOL o en las reglas detectadas.\n"
+        "12. No omitas reglas por simplicidad.\n\n"
+        "ARQUITECTURA:\n"
+        "1. Genera un orquestador principal para el flujo principal.\n"
+        "2. Genera una clase Java por cada subprograma COBOL detectado mediante CALL.\n"
+        "3. Convierte COPYBOOKS, DATA DIVISION y LINKAGE SECTION en records o DTOs.\n"
+        "4. Si hay JCL, genera un BatchOrchestrator simple que simule lectura, proceso y escritura.\n"
+        "5. Separa validaciones, cálculos, reglas y logging en clases distintas.\n\n"
+        "VALIDACIÓN FUNCIONAL:\n"
+        "1. Implementa explícitamente validaciones de campos obligatorios.\n"
+        "2. Implementa estados, flags, importes, límites, saldos, monedas y cálculos tal como aparezcan en COBOL.\n"
+        "3. Implementa todos los caminos de aprobación, rechazo, error o revisión detectados.\n"
+        "4. Si una regla no puede implementarse por falta de información, crea un método TODO con comentario claro, pero no inventes comportamiento.\n\n"
         "SALIDA:\n"
         "Devuelve únicamente bloques ```java ... ```.\n"
-        "Cada bloque debe contener una sola clase, record, enum o interface pública e independiente."
+        "Cada bloque debe ser una clase/record/enum independiente y compilable."
     )
 
     test_modular_prompt = (
@@ -571,33 +456,16 @@ CODIGO ORIGINAL:
     )
 
     prompt_eval_modular = (
-        "Actúa como un auditor técnico de migraciones COBOL a Java.\n\n"
-        "Evalúa comparando explícitamente:\n"
-        "1. Código COBOL original.\n"
-        "2. Reglas de negocio extraídas.\n"
-        "3. Código Java generado.\n"
-        "4. Tests unitarios generados.\n"
-        "5. Escenarios Gherkin generados.\n"
-        "6. Resultado de compilación Java.\n\n"
-        "Genera EXCLUSIVAMENTE una tabla Markdown con este formato:\n"
-        "| Métrica | Porcentaje | Evidencia | Brechas detectadas | Recomendación |\n"
-        "| --- | --- | --- | --- | --- |\n\n"
-        "Incluye estas filas obligatorias:\n"
-        "1. Fidelidad Java vs COBOL\n"
-        "2. Cobertura de reglas por tests\n"
-        "3. Cobertura funcional Gherkin\n"
-        "4. Calidad del código Java\n"
-        "5. Madurez general para revisión humana\n\n"
-        "CRITERIOS:\n"
-        "- Fidelidad mide si el Java implementa las mismas reglas, decisiones, cálculos, estados y códigos que COBOL.\n"
-        "- Cobertura de tests mide si cada regla COBOL tiene al menos un test unitario.\n"
-        "- Cobertura Gherkin mide si los escenarios cubren flujo feliz, errores y casos borde.\n"
-        "- Calidad mide compilación, separación de clases, imports, claridad, duplicidad y mantenibilidad.\n"
-        "- Madurez general combina fidelidad, cobertura y calidad.\n\n"
-        "REGLA IMPORTANTE:\n"
-        "No asignes porcentajes optimistas sin evidencia. "
-        "Si falta una regla, test, import, código de retorno o validación, baja el porcentaje y dilo en Brechas detectadas. "
-        "Redacta para negocio y tecnología."
+        "Genera EXCLUSIVAMENTE una tabla Markdown. NO añadas texto introductorio ni conclusiones.\n"
+        "Formato: | Funcionalidad | Fiabilidad (%) | Cobertura (%) | Calidad (%) | Notas Justificativas |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "REGLA DE ORO PARA NOTAS: Redacta para perfiles de Negocio. "
+        "En lugar de 'alta complejidad ciclomática', escribe 'código difícil de modificar'. "
+        "En lugar de 'falta de inyección de dependencias', escribe 'arquitectura rígida que dificulta futuras actualizaciones'. "
+        "Enfócate en riesgos, mantenibilidad y beneficios de negocio.\n"
+        "ESPECÍFICO MODULAR: Evalúa si el Java generado replica la lógica COBOL. "
+        "Penaliza si hay métodos genéricos sin implementación, clases que no compilan, reglas de negocio omitidas o códigos de retorno no implementados. "
+        "Evalúa trazabilidad COBOL -> regla -> Java -> test."
     )
 
     print("🧠 Generando resumen...")
@@ -620,15 +488,15 @@ CODIGO ORIGINAL:
 
     print("🔄 Generando BPMN ejecutivo...")
     bpmn_ejecutivo = limpiar_mermaid_base(
-        call_agent("BPMN Ejecutivo", bpmn_ejecutivo_prompt, contexto_legacy),
+        call_agent("BPMN Ejecutivo", bpmn_ejecutivo_prompt, contexto_bpmn),
         node_spacing=80,
         rank_spacing=120,
         font_size="14px",
     )
 
     print("🧬 Generando BPMN detallado...")
-    bpmn_detallado = limpiar_mermaid_seguro(
-    call_agent("BPMN Detallado", bpmn_detallado_prompt, contexto_bpmn)
+    bpmn_detallado = limpiar_mermaid_detallado(
+        call_agent("BPMN Detallado", bpmn_detallado_prompt, contexto_bpmn)
     )
 
     contexto_java = f"""
@@ -647,7 +515,7 @@ CÓDIGO ORIGINAL:
 
     print("☕ Generando Java...")
     java_modular_raw = call_agent("Arquitecto Java", java_modular_prompt, contexto_java)
-    clases_java = extraer_unidades_java(java_modular_raw)
+    clases_java = re.findall(r"```java\s*([\s\S]*?)\s*```", java_modular_raw)
 
     contexto_tests = f"""
 REGLAS DE NEGOCIO DETECTADAS:
@@ -671,7 +539,13 @@ CÓDIGO ORIGINAL:
     )
     gherkin_clean = gherkin.replace("```gherkin", "").replace("```", "").strip()
 
-    
+    print("📊 Generando evaluación...")
+    eval_tabla = call_agent(
+        "Analista de Calidad Senior",
+        prompt_eval_modular,
+        java_modular_raw + "\n\n" + test + "\n\n" + gherkin_clean,
+    )
+
     base = "modernized/sistema_consolidado"
     base_java = f"{base}/src/main/java/com/bbva/modernizer"
 
@@ -684,50 +558,10 @@ CÓDIGO ORIGINAL:
         nombre_archivo = nombre_match.group(2) if nombre_match else f"ServicePart{idx}"
         with open(f"{base_java}/{nombre_archivo}.java", "w") as f:
             f.write(contenido_clase.strip())
-    
-    print("🔍 Validando compilación Java...")
-    compilacion_estado, compilacion_detalle = validar_compilacion_java(base_java)
-    print("📊 Generando evaluación...")
-    eval_context = f"""
-COBOL ORIGINAL:
-{codigo_completo}
 
-REGLAS EXTRAÍDAS:
-{logic}
+    with open(f"{base}/src/test/java/com/bbva/modernizer/ModernizedSystemTest.java", "w") as f:
+        f.write(test)
 
-JAVA GENERADO:
-{java_modular_raw}
-
-TESTS GENERADOS:
-{test}
-
-GHERKIN GENERADO:
-{gherkin_clean}
-
-COMPILACIÓN JAVA:
-{compilacion_estado}
-{compilacion_detalle}
-"""
-
-    print("📊 Generando evaluación...")
-    eval_tabla = call_agent(
-        "Auditor Técnico de Migración",
-        prompt_eval_modular,
-        eval_context,
-    )
-
-    tests_extraidos = extraer_unidades_java(test_raw)
-
-    if tests_extraidos:
-        for idx, contenido_test in enumerate(tests_extraidos):
-            nombre_match = re.search(r"(class|record|interface|enum)\s+(\w+)", contenido_test)
-            nombre_archivo = nombre_match.group(2) if nombre_match else f"ModernizedSystemTest{idx}"
-            with open(f"{base}/src/test/java/com/bbva/modernizer/{nombre_archivo}.java", "w") as f:
-                f.write(contenido_test.strip())
-    else:
-        with open(f"{base}/src/test/java/com/bbva/modernizer/ModernizedSystemTest.java", "w") as f:
-            f.write(test)
-            
     with open(f"{base}/src/test/resources/features/sistema_consolidado.feature", "w") as f:
         f.write(gherkin_clean)
 
@@ -750,11 +584,7 @@ COMPILACIÓN JAVA:
             f"Este diagrama muestra JCL, programas COBOL, CALLs, COPYBOOKS, validaciones y archivos.\n\n"
             f"```mermaid\n{bpmn_detallado}\n```\n\n"
             f"---\n\n"
-            f"---\n\n"
-            f"## ✅ 5. Validación Técnica Java\n\n"
-            f"**Compilación Java:** {compilacion_estado}\n\n"
-            f"```text\n{compilacion_detalle}\n```\n\n"
-            f"## 📊 6. Matriz de Calidad y Madurez\n{eval_tabla}\n\n"
+            f"## 📊 5. Matriz de Calidad y Madurez\n{eval_tabla}\n\n"
             f"---\n\n"
             f"## 🧪 6. Escenarios Gherkin Generados\n\n"
             f"```gherkin\n{gherkin_clean}\n```\n"
