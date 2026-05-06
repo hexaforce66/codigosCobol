@@ -152,7 +152,33 @@ def procesar_texto_ia(texto_ia, lista_archivos):
 
     return t
 
+def limpiar_mermaid_seguro(texto):
+    texto = limpiar_mermaid_base(
+        texto,
+        node_spacing=120,
+        rank_spacing=180,
+        font_size="13px"
+    )
 
+    lineas = []
+
+    for linea in texto.splitlines():
+        linea = linea.strip()
+
+        if not linea:
+            continue
+
+        # Evitar headers repetidos
+        if linea.lower().startswith("flowchart ") and lineas:
+            continue
+
+        if linea.lower().startswith("graph ") and lineas:
+            continue
+
+        lineas.append(linea)
+
+    return "\n".join(lineas)
+    
 def mermaid_img_url(code):
     data = {"code": code, "mermaid": {"theme": "default"}}
     compressed = zlib.compress(json.dumps(data).encode("utf-8"), level=9)
@@ -451,8 +477,10 @@ def main():
         "8. Incluye acciones como rectángulos A[Accion].\n"
         "9. No uses etiquetas en flechas. Solo '-->'.\n"
         "10. Usa nombres cortos pero específicos.\n"
-        "11. No limites el diagrama a 12 nodos. Prioriza completitud.\n"
-        "12. Evita texto largo en nodos. Máximo 5 palabras.\n\n"
+        "11. Máximo 30 nodos. Prioriza las dependencias y decisiones más importantes.\n"
+        "12. Usa IDs simples sin espacios ni símbolos: A1, A2, B1, B2.\n"
+        "13. El texto visible dentro de nodos debe ser corto y sin caracteres especiales.\n"
+        "14. Evita texto largo en nodos. Máximo 5 palabras.\n\n"
         "ESTRUCTURA ESPERADA:\n"
         "subgraph JCL\n"
         "direction TB\n"
@@ -587,8 +615,8 @@ def main():
     )
 
     print("🧬 Generando BPMN detallado...")
-    bpmn_detallado = limpiar_mermaid_detallado(
-        call_agent("BPMN Detallado", bpmn_detallado_prompt, contexto_legacy)
+    bpmn_detallado = limpiar_mermaid_seguro(
+    call_agent("BPMN Detallado", bpmn_detallado_prompt, contexto_legacy)
     )
 
     contexto_java = f"""
