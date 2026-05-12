@@ -110,7 +110,7 @@ flowchart LR
 
 
 def limpiar_mermaid_detallado(texto):
-    return limpiar_mermaid_base(texto, node_spacing=120, rank_spacing=180, font_size="13px")
+    return limpiar_mermaid_base(texto, node_spacing=180, rank_spacing=260, font_size="14px")
 
 
 def procesar_texto_ia(texto_ia, lista_archivos):
@@ -210,10 +210,36 @@ def publish_to_confluence():
         def replace_mermaid(match):
             mermaid_code = match.group(1).strip()
             url = mermaid_img_url(mermaid_code)
-            return f'<br/><img src="{url}" alt="BPMN" style="max-width:100%; height:auto;"/><br/>'
+            return f'''
+            <br/>
+            <img src="{url}" 
+                alt="BPMN" 
+                style="width:1800px; max-width:none; height:auto;"/>
+            <br/>
+            '''
 
         text = re.sub(r"```mermaid([\s\S]*?)```", replace_mermaid, text)
         html = markdown.markdown(text, extensions=["tables", "fenced_code"])
+        toc_macro = """
+        <ac:structured-macro ac:name="toc">
+            <ac:parameter ac:name="maxLevel">3</ac:parameter>
+            <ac:parameter ac:name="minLevel">2</ac:parameter>
+        </ac:structured-macro>
+        """
+
+        html = f"""
+        <ac:layout>
+          <ac:layout-section ac:type="two_right_sidebar">
+            <ac:layout-cell>
+              {html}
+            </ac:layout-cell>
+            <ac:layout-cell>
+              <h2>Índice</h2>
+              {toc_macro}
+            </ac:layout-cell>
+      </ac:layout-section>
+    </ac:layout>
+    """
 
         titulo = f"Reporte AI - {os.path.basename(os.path.dirname(md_path))} - {time.strftime('%H:%M')}"
 
