@@ -590,7 +590,7 @@ def main():
         call_agent("BPMN Ejecutivo", bpmn_ejecutivo_prompt, contexto_legacy),
         node_spacing=80,
         rank_spacing=120,
-        font_size="14px",
+        font_size="20px",
     )
 
     print("🧬 Generando BPMN detallado...")
