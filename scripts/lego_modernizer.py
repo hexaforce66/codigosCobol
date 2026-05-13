@@ -66,7 +66,7 @@ def normalizar_ruta_archivo(arch):
     return "/" + ruta
 
 
-def limpiar_mermaid_base(texto, node_spacing=80, rank_spacing=120, font_size="14px"):
+def limpiar_mermaid_base(texto, node_spacing=80, rank_spacing=120, font_size="14px",direction="LR"):
     texto = texto.replace("```mermaid", "").replace("```", "").strip()
     texto = re.sub(
         r"^\s*(graph|flowchart)\s+(TD|TB|LR|RL)\s*",
@@ -105,13 +105,19 @@ def limpiar_mermaid_base(texto, node_spacing=80, rank_spacing=120, font_size="14
     "fontSize": "{font_size}"
   }}
 }}}}%%
-flowchart LR
+flowchart {direction}
 """
     return header + texto
 
 
 def limpiar_mermaid_detallado(texto):
-    return limpiar_mermaid_base(texto, node_spacing=120, rank_spacing=180, font_size="13px")
+    return limpiar_mermaid_base(
+        texto,
+        node_spacing=70,
+        rank_spacing=110,
+        font_size="20px",
+        direction="TB",
+    )
 
 
 def procesar_texto_ia(texto_ia, lista_archivos):
@@ -448,9 +454,9 @@ def main():
         "OBJETIVO:\n"
         "Mapear cada proceso relevante del sistema: JCL, programa principal, subprogramas, copybooks, validaciones, decisiones, archivos de entrada y salida.\n\n"
         "REGLAS:\n"
-        "1. Usa 'flowchart LR'.\n"
+        "1. Usa 'flowchart TB'.\n"
         "2. Usa subgraph para cada bloque: JCL, Programa Principal, Subprogramas, Copybooks, Archivos.\n"
-        "3. Dentro de cada subgraph usa 'direction TB'.\n"
+        "3. Dentro de cada subgraph usa 'direction LR' solo si el bloque tiene pocos nodos; si no, usa 'direction TB'.\n"
         "4. Incluye cada CALL detectado como nodo o subgraph.\n"
         "5. Incluye cada COPYBOOK relevante como nodo conectado al programa que lo usa.\n"
         "6. Incluye archivos de entrada/salida del JCL como nodos.\n"
@@ -460,6 +466,10 @@ def main():
         "10. Usa nombres cortos pero específicos.\n"
         "11. No limites el diagrama a 12 nodos. Prioriza completitud.\n"
         "12. Evita texto largo en nodos. Máximo 5 palabras.\n\n"
+        "13. Organiza el diagrama en bloques verticales para que sea legible en pantalla.\n"
+        "14. Evita líneas largas entre subgraphs; conecta los bloques principales y no cada nodo individual si genera ruido visual.\n"
+        "15. Prioriza legibilidad sobre completitud visual: si hay muchas conexiones, agrúpalas por bloque.\n"
+        "16. El diagrama debe ser apto para presentación ejecutiva en video.\n"
         "ESTRUCTURA ESPERADA:\n"
         "subgraph JCL\n"
         "direction TB\n"
